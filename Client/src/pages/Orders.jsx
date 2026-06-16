@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { getOrders, deleteOrder } from '../services/orderService';
@@ -7,6 +8,7 @@ import '../styles/orders.css';
 
 const Orders = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,6 +40,21 @@ const Orders = () => {
       toast.error('Failed to cancel order');
       console.error(error);
     }
+  };
+
+  const viewTracking = (orderId) => {
+    navigate(`/orders/${orderId}/tracking`);
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#fbbf24',
+      confirmed: '#3b82f6',
+      shipped: '#8b5cf6',
+      delivered: '#10b981',
+      cancelled: '#ef4444',
+    };
+    return colors[status] || '#6b7280';
   };
 
   if (loading) {
@@ -95,6 +112,14 @@ const Orders = () => {
 
                     <div className="order-details">
                       <h3>{order.items?.[0]?.product?.name || 'Product'}</h3>
+                      
+                      {/* Tracking Number */}
+                      {order.trackingNumber && (
+                        <div className="tracking-number">
+                          <strong>Tracking:</strong> {order.trackingNumber}
+                        </div>
+                      )}
+
                       <div className="order-info">
                         <p><strong>Quantity:</strong> {order.items?.[0]?.quantity || 1}</p>
                         <p><strong>Price:</strong> ₹ {order.totalPrice?.toLocaleString() || '0'}</p>
@@ -103,16 +128,35 @@ const Orders = () => {
                       <div className="order-meta">
                         <p><strong>Address:</strong> {order.shippingAddress || 'N/A'}</p>
                         <p><strong>Ordered on:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
+                        {order.estimatedDelivery && (
+                          <p><strong>Est. Delivery:</strong> {new Date(order.estimatedDelivery).toLocaleDateString()}</p>
+                        )}
                       </div>
                       <p className="order-status">
-                        <strong>Order status:</strong> {order.status || 'pending'}
+                        <strong>Status:</strong> 
+                        <span 
+                          className="status-badge" 
+                          style={{ backgroundColor: getStatusColor(order.status) }}
+                        >
+                          {order.status || 'pending'}
+                        </span>
                       </p>
-                      <button 
-                        className="btn btn-danger btn-sm"
-                        onClick={() => cancelOrder(order._id)}
-                      >
-                        Cancel
-                      </button>
+                      <div className="order-actions">
+                        <button 
+                          className="btn btn-primary btn-sm"
+                          onClick={() => viewTracking(order._id)}
+                        >
+                          Track Order
+                        </button>
+                        {order.status === 'pending' && (
+                          <button 
+                            className="btn btn-danger btn-sm"
+                            onClick={() => cancelOrder(order._id)}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -12,6 +12,7 @@ import Register from './pages/Register';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
+import OrderTracking from './pages/OrderTracking';
 import AdminRoute from './routes/AdminRoute';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminProducts from './pages/admin/AdminProducts';
@@ -43,6 +44,7 @@ function App() {
               <Route path="/cart" element={<><Navbar /><Cart /></>} />
               <Route path="/checkout" element={<><Navbar /><Checkout /></>} />
               <Route path="/orders" element={<><Navbar /><Orders /></>} />
+              <Route path="/orders/:id/tracking" element={<><Navbar /><OrderTracking /></>} />
               <Route path="/profile" element={<><Navbar /><Orders /></>} />
 
               {/* Admin Routes - Protected with AdminNavbar */}

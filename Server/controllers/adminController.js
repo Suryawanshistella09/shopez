@@ -158,22 +158,108 @@ exports.getDashboard = async (req, res, next) => {
 exports.updateOrderStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { orderStatus, status } = req.body;
+    const { orderStatus, status, location, description } = req.body;
     
     // Accept both orderStatus and status
     const newStatus = orderStatus || status;
 
-    const order = await Order.findByIdAndUpdate(
-      id,
-      { status: newStatus },
-      { new: true }
-    ).populate("user", "name email");
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Update status
+    order.status = newStatus;
+
+    // Add to tracking history
+    order.trackingHistory.push({
+      status: newStatus,
+      location: location || 'Warehouse',
+      description: description || `Order status updated to ${newStatus}`,
+      timestamp: new Date(),
+      updatedBy: req.user.id,
+    });
+
+    // Set estimated delivery if status is shipped
+    if (newStatus === 'shipped' && !order.estimatedDelivery) {
+      const estimatedDate = new Date();
+      estimatedDate.setDate(estimatedDate.getDate() + 5); // 5 days from now
+      order.estimatedDelivery = estimatedDate;
+    }
+
+    // Set actual delivery date if delivered
+    if (newStatus === 'delivered') {
+      order.actualDelivery = new Date();
+    }
+
+    await order.save();
+    await order.populate("user", "name email");
+
+    res.status(200).json({ message: "Order status updated", order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Add tracking update (admin only)
+exports.addTrackingUpdate = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { location, description, status } = req.body;
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Add tracking update
+    order.trackingHistory.push({
+      status: status || order.status,
+      location: location || 'In Transit',
+      description: description || 'Package is in transit',
+      timestamp: new Date(),
+      updatedBy: req.user.id,
+    });
+
+    await order.save();
+    await order.populate("user", "name email");
+
+    res.status(200).json({ 
+      message: "Tracking update added", 
+      order,
+      trackingHistory: order.trackingHistory 
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get order tracking details (admin only)
+exports.getOrderTracking = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findById(id)
+      .populate("user", "name email")
+      .populate("items.product")
+      .populate("trackingHistory.updatedBy", "name");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    res.status(200).json({ message: "Order status updated", order });
+    res.status(200).json({ 
+      message: "Order tracking fetched",
+      tracking: {
+        orderId: order._id,
+        trackingNumber: order.trackingNumber,
+        status: order.status,
+        estimatedDelivery: order.estimatedDelivery,
+        actualDelivery: order.actualDelivery,
+        trackingHistory: order.trackingHistory,
+        shippingAddress: order.shippingAddress,
+      }
+    });
   } catch (error) {
     next(error);
   }

@@ -7,6 +7,14 @@ import '../../styles/admin.css';
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState(''); // 'status' or 'tracking'
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [formData, setFormData] = useState({
+    status: '',
+    location: '',
+    description: '',
+  });
 
   useEffect(() => {
     fetchOrders();
@@ -25,28 +33,93 @@ const AdminOrders = () => {
     }
   };
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
+  const openStatusModal = (order) => {
+    setSelectedOrder(order);
+    setModalType('status');
+    setFormData({
+      status: order.orderStatus || 'pending',
+      location: '',
+      description: '',
+    });
+    setShowModal(true);
+  };
+
+  const openTrackingModal = (order) => {
+    setSelectedOrder(order);
+    setModalType('tracking');
+    setFormData({
+      status: order.orderStatus || 'pending',
+      location: '',
+      description: '',
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedOrder(null);
+    setFormData({
+      status: '',
+      location: '',
+      description: '',
+    });
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate all fields are filled
+    if (!formData.location.trim() || !formData.description.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
     try {
-      await api.put(`/admin/orders/${orderId}`, { orderStatus: newStatus });
-      toast.success('Order status updated');
+      if (modalType === 'status') {
+        await api.put(`/admin/orders/${selectedOrder._id}`, { 
+          orderStatus: formData.status,
+          location: formData.location,
+          description: formData.description
+        });
+        toast.success('Order status updated with tracking');
+      } else {
+        await api.post(`/admin/orders/${selectedOrder._id}/tracking`, {
+          location: formData.location,
+          description: formData.description
+        });
+        toast.success('Tracking update added');
+      }
+      
       fetchOrders();
+      closeModal();
     } catch (error) {
-      toast.error('Failed to update order status');
+      toast.error('Failed to update order');
       console.error(error);
     }
   };
 
+  const viewTracking = (orderId) => {
+    window.open(`/orders/${orderId}/tracking`, '_blank');
+  };
+
   const handleCancelOrder = async (orderId) => {
-    if (!window.confirm('Are you sure you want to cancel this order?')) {
+    if (!window.confirm('Are you sure you want to delete this order?')) {
       return;
     }
 
     try {
       await api.delete(`/orders/${orderId}`);
-      toast.success('Order cancelled successfully');
+      toast.success('Order deleted successfully');
       fetchOrders();
     } catch (error) {
-      toast.error('Failed to cancel order');
+      toast.error('Failed to delete order');
       console.error(error);
     }
   };
@@ -98,6 +171,12 @@ const AdminOrders = () => {
                   
                   <div className="order-info-grid">
                     <div className="info-item">
+                      <span className="label">Tracking:</span>
+                      <span className="value" style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+                        {order.trackingNumber || 'Pending'}
+                      </span>
+                    </div>
+                    <div className="info-item">
                       <span className="label">Quantity:</span>
                       <span className="value">{order.products?.[0]?.quantity || 1}</span>
                     </div>
@@ -132,30 +211,36 @@ const AdminOrders = () => {
 
                   <div className="order-dates">
                     <p><strong>Ordered on:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
-                    <p><strong>Address:</strong> {order.shippingAddress?.street || 'N/A'}</p>
+                    <p><strong>Address:</strong> {order.shippingAddress?.street || order.shippingAddress || 'N/A'}</p>
                     <p><strong>Pincode:</strong> {order.shippingAddress?.postalCode || 'N/A'}</p>
                   </div>
 
                   <div className="order-status-section">
-                    <p className="status-label">Order status: <strong>{order.orderStatus || 'In-transit'}</strong></p>
+                    <p className="status-label">Order status: <strong>{order.orderStatus || order.status || 'pending'}</strong></p>
                     <div className="order-actions">
-                      <select 
-                        className="status-select"
-                        defaultValue={order.orderStatus || 'In-transit'}
-                        onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
+                      <button 
+                        className="btn-update-order"
+                        onClick={() => openStatusModal(order)}
                       >
-                        <option value="Pending">Pending</option>
-                        <option value="Processing">Processing</option>
-                        <option value="In-transit">In-transit</option>
-                        <option value="Delivered">Delivered</option>
-                        <option value="Cancelled">Cancelled</option>
-                      </select>
-                      <button className="btn-update-order">Update</button>
+                        Update Status
+                      </button>
+                      <button 
+                        className="btn-update-order"
+                        onClick={() => openTrackingModal(order)}
+                      >
+                        Add Tracking
+                      </button>
+                      <button 
+                        className="btn-view-tracking"
+                        onClick={() => viewTracking(order._id)}
+                      >
+                        View Tracking
+                      </button>
                       <button 
                         className="btn-cancel-order"
                         onClick={() => handleCancelOrder(order._id)}
                       >
-                        Cancel
+                        Delete
                       </button>
                     </div>
                   </div>
@@ -165,6 +250,74 @@ const AdminOrders = () => {
           </div>
         )}
       </div>
+
+      {/* Modal for Status Update and Tracking */}
+      {showModal && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{modalType === 'status' ? 'Update Order Status' : 'Add Tracking Update'}</h3>
+              <button className="modal-close" onClick={closeModal}>&times;</button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="modal-form">
+              {modalType === 'status' && (
+                <div className="form-group">
+                  <label htmlFor="status">Order Status *</label>
+                  <select
+                    id="status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    required
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="shipped">Shipped</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label htmlFor="location">Location *</label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Warehouse, Mumbai Hub, Out for Delivery"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="description">Description *</label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Package has been received at sorting facility"
+                  rows="3"
+                  required
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={closeModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  {modalType === 'status' ? 'Update Status' : 'Add Tracking'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

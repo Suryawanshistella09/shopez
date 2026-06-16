@@ -193,3 +193,39 @@
     font-size: 16px;
   }
 }
+
+
+/* Tracking Number */
+.tracking-number {
+  padding: 8px 12px;
+  background: var(--bg-gray-light);
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  font-family: monospace;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  margin-left: 8px;
+  text-transform: capitalize;
+}
+
+/* Order Actions */
+.order-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.order-actions .btn {
+  flex: 1;
+  min-width: 120px;
+}

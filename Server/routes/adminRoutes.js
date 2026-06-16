@@ -19,6 +19,10 @@ router.get("/orders", adminController.getAllOrders);
 router.get("/orders/stats", adminController.getOrderStats);
 router.put("/orders/:id", adminController.updateOrderStatus);
 
+// Order tracking routes
+router.get("/orders/:id/tracking", adminController.getOrderTracking);
+router.post("/orders/:id/tracking", adminController.addTrackingUpdate);
+
 // Product statistics
 router.get("/products/stats", adminController.getProductStats);
 

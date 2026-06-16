@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,7 @@ const Checkout = () => {
     paymentMethod: 'cash_on_delivery',
   });
   const [loading, setLoading] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
 
   const calculateTotal = () => {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -39,7 +40,6 @@ const Checkout = () => {
     try {
       setLoading(true);
 
-      // Prepare order data
       const orderData = {
         items: cart.map(item => ({
           product: item._id,
@@ -53,7 +53,7 @@ const Checkout = () => {
       
       toast.success('Order placed successfully!');
       clearCart();
-      navigate('/orders');
+      setOrderSuccess(true);
     } catch (error) {
       toast.error(error.message || 'Failed to place order');
       console.error(error);
@@ -62,25 +62,26 @@ const Checkout = () => {
     }
   };
 
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
+  // Handle redirect to login if not authenticated
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
 
-  if (cart.length === 0) {
-    return (
-      <div className="checkout-page">
-        <div className="container">
-          <div className="empty-checkout">
-            <h2>Your cart is empty</h2>
-            <button className="btn btn-primary" onClick={() => navigate('/products')}>
-              Browse Products
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Handle redirect to products if cart is empty
+  useEffect(() => {
+    if (user && cart.length === 0 && !orderSuccess) {
+      navigate('/products', { replace: true });
+    }
+  }, [cart.length, user, navigate, orderSuccess]);
+
+  // Handle redirect after successful order
+  useEffect(() => {
+    if (orderSuccess) {
+      navigate('/orders', { replace: true });
+    }
+  }, [orderSuccess, navigate]);
 
   return (
     <div className="checkout-page">

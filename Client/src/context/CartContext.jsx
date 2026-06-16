@@ -13,8 +13,21 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
   const { user } = useAuth();
+  const [cart, setCart] = useState(() => {
+    // Initialize cart from localStorage on mount
+    const cartKey = user ? `shopezCart_${user.id}` : 'shopezCart_guest';
+    const savedCart = localStorage.getItem(cartKey);
+    if (savedCart) {
+      try {
+        return JSON.parse(savedCart);
+      } catch (error) {
+        console.error('Failed to load cart:', error);
+        return [];
+      }
+    }
+    return [];
+  });
 
   // Get user-specific cart key
   const getCartKey = () => {
@@ -23,10 +36,6 @@ export const CartProvider = ({ children }) => {
 
   // Load cart when user changes
   useEffect(() => {
-    loadCart();
-  }, [user]);
-
-  const loadCart = () => {
     const cartKey = getCartKey();
     const savedCart = localStorage.getItem(cartKey);
     if (savedCart) {
@@ -39,7 +48,7 @@ export const CartProvider = ({ children }) => {
     } else {
       setCart([]);
     }
-  };
+  }, [user]);
 
   // Save cart whenever it changes
   useEffect(() => {
