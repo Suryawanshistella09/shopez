@@ -1,0 +1,30 @@
+# Root .gitignore for ShopEZ
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Editor directories and files
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+
+# Build outputs
+dist
+build
+
+# Test coverage
+coverage
